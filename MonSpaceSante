@@ -1,0 +1,1449 @@
+import { useState, useEffect, useRef } from "react";
+
+// ─────────────────────────────────────────────
+//  MOCK DATABASE
+// ─────────────────────────────────────────────
+const DB = {
+  get: (key) => { try { return JSON.parse(localStorage.getItem(key)) || []; } catch { return []; } },
+  set: (key, val) => localStorage.setItem(key, JSON.stringify(val)),
+  getObj: (key) => { try { return JSON.parse(localStorage.getItem(key)) || null; } catch { return null; } },
+};
+const hashPin = (pin) => btoa(pin + "mes_salt_2025");
+
+// ─────────────────────────────────────────────
+//  ICONS
+// ─────────────────────────────────────────────
+const Icon = ({ name, size = 20, color = "currentColor" }) => {
+  const icons = {
+    heart: <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" fill={color} stroke="none"/>,
+    user: <><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></>,
+    stethoscope: <><path d="M4.8 2.3A.3.3 0 1 0 5 2H4a2 2 0 0 0-2 2v5a6 6 0 0 0 6 6 6 6 0 0 0 6-6V4a2 2 0 0 0-2-2h-1a.2.2 0 1 0 .3.3"/><path d="M8 15v1a6 6 0 0 0 6 6v0a6 6 0 0 0 6-6v-4"/><circle cx="20" cy="10" r="2"/></>,
+    phone: <><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.42A2 2 0 0 1 3.6 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.6a16 16 0 0 0 6.29 6.29l.46-.46a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></>,
+    document: <><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10,9 9,9 8,9"/></>,
+    lock: <><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></>,
+    upload: <><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></>,
+    send: <><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></>,
+    check: <polyline points="20 6 9 17 4 12"/>,
+    plus: <><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></>,
+    eye: <><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></>,
+    eyeoff: <><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></>,
+    home: <><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></>,
+    logout: <><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></>,
+    credit: <><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></>,
+    scan: <><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><line x1="7" y1="12" x2="17" y2="12"/></>,
+    info: <><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></>,
+    arrow: <><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></>,
+    calendar: <><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></>,
+    clock: <><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></>,
+    x: <><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></>,
+    bell: <><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></>,
+    edit: <><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></>,
+    trash: <><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></>,
+  };
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      {icons[name]}
+    </svg>
+  );
+};
+
+// ─────────────────────────────────────────────
+//  TOAST
+// ─────────────────────────────────────────────
+const Toast = ({ toasts, remove }) => (
+  <div style={{ position: "fixed", top: 20, right: 20, zIndex: 9999, display: "flex", flexDirection: "column", gap: 8 }}>
+    {toasts.map(t => (
+      <div key={t.id} onClick={() => remove(t.id)} style={{
+        background: t.type === "success" ? "#10b981" : t.type === "error" ? "#ef4444" : "#3b82f6",
+        color: "#fff", padding: "12px 20px", borderRadius: 12, cursor: "pointer",
+        boxShadow: "0 4px 20px rgba(0,0,0,0.2)", fontSize: 14, maxWidth: 320,
+        animation: "slideIn 0.3s ease"
+      }}>{t.msg}</div>
+    ))}
+  </div>
+);
+function useToast() {
+  const [toasts, setToasts] = useState([]);
+  const add = (msg, type = "info") => {
+    const id = Date.now();
+    setToasts(p => [...p, { id, msg, type }]);
+    setTimeout(() => setToasts(p => p.filter(t => t.id !== id)), 3500);
+  };
+  const remove = (id) => setToasts(p => p.filter(t => t.id !== id));
+  return { toasts, add, remove };
+}
+
+// ─────────────────────────────────────────────
+//  STATUS BADGE
+// ─────────────────────────────────────────────
+const StatusBadge = ({ status }) => {
+  const cfg = {
+    en_attente:  { label: "En attente",  bg: "#fef3c7", color: "#d97706", dot: "#f59e0b" },
+    confirme:    { label: "Confirmé",    bg: "#d1fae5", color: "#065f46", dot: "#10b981" },
+    annule:      { label: "Annulé",      bg: "#fee2e2", color: "#991b1b", dot: "#ef4444" },
+    termine:     { label: "Terminé",     bg: "#e0f2fe", color: "#0369a1", dot: "#0ea5e9" },
+  };
+  const c = cfg[status] || cfg.en_attente;
+  return (
+    <span style={{ display:"inline-flex", alignItems:"center", gap:5, background:c.bg, color:c.color,
+      padding:"3px 10px", borderRadius:100, fontSize:12, fontWeight:700 }}>
+      <span style={{ width:7, height:7, borderRadius:"50%", background:c.dot, display:"inline-block" }}/>
+      {c.label}
+    </span>
+  );
+};
+
+// ─────────────────────────────────────────────
+//  PAYMENT MODAL
+// ─────────────────────────────────────────────
+const PaymentModal = ({ amount, reason, onSuccess, onCancel }) => {
+  const [method, setMethod] = useState("orange");
+  const [phone, setPhone] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [step, setStep] = useState(1);
+  const pay = () => {
+    if (!phone || phone.length < 9) return;
+    setLoading(true);
+    setTimeout(() => { setLoading(false); setStep(2); setTimeout(onSuccess, 1500); }, 2000);
+  };
+  return (
+    <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.6)", zIndex:1000, display:"flex", alignItems:"center", justifyContent:"center", padding:16 }}>
+      <div style={{ background:"#fff", borderRadius:20, padding:32, maxWidth:420, width:"100%", boxShadow:"0 20px 60px rgba(0,0,0,0.3)" }}>
+        {step === 1 ? (
+          <>
+            <div style={{ textAlign:"center", marginBottom:24 }}>
+              <div style={{ width:64, height:64, background:"linear-gradient(135deg,#FF6B00,#FF8C00)", borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 12px" }}>
+                <Icon name="credit" size={28} color="#fff"/>
+              </div>
+              <h3 style={{ margin:0, fontSize:20, color:"#1e293b" }}>Paiement Requis</h3>
+              <p style={{ color:"#64748b", margin:"8px 0 0" }}>{reason}</p>
+            </div>
+            <div style={{ background:"#f0fdf4", border:"2px solid #10b981", borderRadius:12, padding:16, textAlign:"center", marginBottom:24 }}>
+              <span style={{ fontSize:32, fontWeight:800, color:"#059669" }}>{amount.toLocaleString()} FG</span>
+              <p style={{ margin:"4px 0 0", color:"#64748b", fontSize:13 }}>Compte Admin: 626 584 939</p>
+            </div>
+            <div style={{ display:"flex", gap:8, marginBottom:16 }}>
+              {[{key:"orange",label:"Orange Money",color:"#FF6B00"},{key:"mtn",label:"MTN Mobile",color:"#FFCC00"}].map(m=>(
+                <button key={m.key} onClick={()=>setMethod(m.key)} style={{ flex:1, padding:"10px 8px", border:`2px solid ${method===m.key?m.color:"#e2e8f0"}`, borderRadius:10, background:method===m.key?m.color+"15":"#fff", cursor:"pointer", fontSize:13, fontWeight:600, color:method===m.key?m.color:"#64748b" }}>{m.label}</button>
+              ))}
+            </div>
+            <input value={phone} onChange={e=>setPhone(e.target.value)} placeholder="Numéro de téléphone"
+              style={{ width:"100%", padding:"12px 16px", border:"2px solid #e2e8f0", borderRadius:10, fontSize:15, boxSizing:"border-box", marginBottom:16 }}/>
+            <div style={{ display:"flex", gap:8 }}>
+              <button onClick={onCancel} style={{ flex:1, padding:12, border:"2px solid #e2e8f0", borderRadius:10, background:"#fff", cursor:"pointer", fontSize:14, color:"#64748b" }}>Annuler</button>
+              <button onClick={pay} disabled={loading} style={{ flex:2, padding:12, border:"none", borderRadius:10, background:"linear-gradient(135deg,#0ea5e9,#0284c7)", color:"#fff", cursor:"pointer", fontSize:14, fontWeight:700 }}>
+                {loading?"Traitement...":"Payer Maintenant"}
+              </button>
+            </div>
+          </>
+        ) : (
+          <div style={{ textAlign:"center", padding:"20px 0" }}>
+            <div style={{ width:72, height:72, background:"#10b981", borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 16px" }}>
+              <Icon name="check" size={36} color="#fff"/>
+            </div>
+            <h3 style={{ color:"#059669", margin:0 }}>Paiement Confirmé!</h3>
+            <p style={{ color:"#64748b" }}>Transaction réussie.</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// ─────────────────────────────────────────────
+//  PRISE DE RDV — MODAL PATIENT
+// ─────────────────────────────────────────────
+const RdvModal = ({ medecin, patient, onClose, onConfirm, toast }) => {
+  const today = new Date().toISOString().split("T")[0];
+  const [form, setForm] = useState({ date: "", heure: "", motif: "", type: "presentiel" });
+  const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
+
+  const creneaux = ["08:00","08:30","09:00","09:30","10:00","10:30","11:00","11:30","14:00","14:30","15:00","15:30","16:00","16:30","17:00","17:30"];
+
+  // Vérifie si un créneau est déjà pris
+  const rdvExistants = DB.get("mes_rdv").filter(r => r.medecinId === medecin.id && r.date === form.date && r.statut !== "annule");
+  const prisEnCharge = rdvExistants.map(r => r.heure);
+
+  const submit = () => {
+    if (!form.date || !form.heure || !form.motif) { toast.add("Remplissez tous les champs", "error"); return; }
+    onConfirm(form);
+  };
+
+  return (
+    <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.6)", zIndex:500, display:"flex", alignItems:"center", justifyContent:"center", padding:16 }}>
+      <div style={{ background:"#fff", borderRadius:24, padding:28, maxWidth:480, width:"100%", boxShadow:"0 20px 60px rgba(0,0,0,0.25)", maxHeight:"90vh", overflowY:"auto" }}>
+        {/* Header */}
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:20 }}>
+          <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+            <div style={{ width:48, height:48, background:"linear-gradient(135deg,#0ea5e9,#0284c7)", borderRadius:14, display:"flex", alignItems:"center", justifyContent:"center" }}>
+              <Icon name="calendar" size={22} color="#fff"/>
+            </div>
+            <div>
+              <div style={{ fontWeight:800, fontSize:17, color:"#0f172a" }}>Prendre un RDV</div>
+              <div style={{ fontSize:13, color:"#10b981", fontWeight:600 }}>Dr. {medecin.prenom} {medecin.nom}</div>
+            </div>
+          </div>
+          <button onClick={onClose} style={{ background:"#f1f5f9", border:"none", borderRadius:"50%", width:34, height:34, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>
+            <Icon name="x" size={16} color="#64748b"/>
+          </button>
+        </div>
+
+        {/* Infos médecin */}
+        <div style={{ background:"#f0fdf4", borderRadius:12, padding:"12px 16px", marginBottom:20, display:"flex", alignItems:"center", gap:12 }}>
+          {medecin.photo
+            ? <img src={medecin.photo} style={{ width:44, height:44, borderRadius:"50%", objectFit:"cover" }}/>
+            : <div style={{ width:44, height:44, background:"#10b98130", borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center" }}><Icon name="user" size={20} color="#10b981"/></div>
+          }
+          <div>
+            <div style={{ fontWeight:700, color:"#0f172a", fontSize:14 }}>Dr. {medecin.prenom} {medecin.nom}</div>
+            <div style={{ fontSize:12, color:"#64748b" }}>{medecin.profession} · {medecin.hopital || "Clinique"}</div>
+            <div style={{ fontSize:12, color:"#10b981", fontWeight:600 }}>{medecin.experience} ans d'expérience</div>
+          </div>
+        </div>
+
+        {/* Type de consultation */}
+        <div style={{ marginBottom:16 }}>
+          <label style={{ display:"block", fontSize:13, fontWeight:700, color:"#374151", marginBottom:8 }}>Type de consultation</label>
+          <div style={{ display:"flex", gap:8 }}>
+            {[{key:"presentiel",label:"🏥 Présentiel"},{key:"domicile",label:"🏠 À domicile"},{key:"teleconsult",label:"📱 Téléconsultation"}].map(t=>(
+              <button key={t.key} onClick={()=>set("type",t.key)} style={{ flex:1, padding:"9px 4px", border:`2px solid ${form.type===t.key?"#0ea5e9":"#e2e8f0"}`, borderRadius:10, background:form.type===t.key?"#e0f2fe":"#fff", cursor:"pointer", fontSize:12, fontWeight:600, color:form.type===t.key?"#0284c7":"#64748b" }}>
+                {t.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Date */}
+        <div style={{ marginBottom:16 }}>
+          <label style={{ display:"block", fontSize:13, fontWeight:700, color:"#374151", marginBottom:6 }}>Date du rendez-vous *</label>
+          <input type="date" min={today} value={form.date} onChange={e=>set("date",e.target.value)}
+            style={{ width:"100%", padding:"11px 14px", border:"2px solid #e2e8f0", borderRadius:10, fontSize:14, boxSizing:"border-box" }}/>
+        </div>
+
+        {/* Créneaux horaires */}
+        {form.date && (
+          <div style={{ marginBottom:16 }}>
+            <label style={{ display:"block", fontSize:13, fontWeight:700, color:"#374151", marginBottom:8 }}>Choisir un créneau *</label>
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:7 }}>
+              {creneaux.map(h => {
+                const pris = prisEnCharge.includes(h);
+                const selectionne = form.heure === h;
+                return (
+                  <button key={h} onClick={()=>!pris&&set("heure",h)} disabled={pris} style={{
+                    padding:"9px 4px", border:`2px solid ${selectionne?"#0ea5e9":pris?"#e2e8f0":"#e2e8f0"}`,
+                    borderRadius:9, background:selectionne?"#0ea5e9":pris?"#f8fafc":"#fff",
+                    color:selectionne?"#fff":pris?"#cbd5e1":"#374151",
+                    cursor:pris?"not-allowed":"pointer", fontSize:13, fontWeight:600,
+                    textDecoration:pris?"line-through":"none"
+                  }}>
+                    {h}
+                  </button>
+                );
+              })}
+            </div>
+            {prisEnCharge.length > 0 && <p style={{ fontSize:11, color:"#94a3b8", marginTop:6 }}>⚫ Créneau déjà réservé</p>}
+          </div>
+        )}
+
+        {/* Motif */}
+        <div style={{ marginBottom:20 }}>
+          <label style={{ display:"block", fontSize:13, fontWeight:700, color:"#374151", marginBottom:6 }}>Motif de la consultation *</label>
+          <textarea value={form.motif} onChange={e=>set("motif",e.target.value)} rows={3}
+            placeholder="Ex: Fièvre depuis 3 jours, douleur abdominale, consultation de routine..."
+            style={{ width:"100%", padding:"11px 14px", border:"2px solid #e2e8f0", borderRadius:10, fontSize:14, resize:"vertical", boxSizing:"border-box" }}/>
+        </div>
+
+        {/* Note urgence */}
+        <div style={{ background:"#fef3c7", borderRadius:10, padding:"10px 14px", marginBottom:20, display:"flex", gap:8 }}>
+          <Icon name="info" size={16} color="#f59e0b"/>
+          <span style={{ fontSize:12, color:"#92400e" }}>Le médecin confirmera votre RDV dans les 24h. Vous recevrez une notification.</span>
+        </div>
+
+        <div style={{ display:"flex", gap:10 }}>
+          <button onClick={onClose} style={{ flex:1, padding:13, border:"2px solid #e2e8f0", borderRadius:12, background:"#fff", cursor:"pointer", fontSize:14, color:"#64748b", fontWeight:600 }}>Annuler</button>
+          <button onClick={submit} style={{ flex:2, padding:13, border:"none", borderRadius:12, background:"linear-gradient(135deg,#0ea5e9,#0284c7)", color:"#fff", cursor:"pointer", fontSize:15, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}>
+            <Icon name="calendar" size={17} color="#fff"/> Confirmer la demande
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ─────────────────────────────────────────────
+//  ONGLET RDV PATIENT
+// ─────────────────────────────────────────────
+const RdvPatientTab = ({ user, toast }) => {
+  const [medecins, setMedecins] = useState([]);
+  const [mesRdv, setMesRdv] = useState([]);
+  const [vue, setVue] = useState("liste_medecins"); // liste_medecins | mes_rdv
+  const [medecinChoisi, setMedecinChoisi] = useState(null);
+  const [search, setSearch] = useState("");
+
+  const charger = () => {
+    setMedecins(DB.get("mes_medecins"));
+    setMesRdv(DB.get("mes_rdv").filter(r => r.patientId === user.id));
+  };
+  useEffect(() => { charger(); }, [user.id]);
+
+  const demanderRdv = (form) => {
+    const rdvList = DB.get("mes_rdv");
+    const nouveau = {
+      id: Date.now().toString(),
+      patientId: user.id,
+      patientNom: `${user.prenom} ${user.nom}`,
+      patientTel: user.tel,
+      medecinId: medecinChoisi.id,
+      medecinNom: `${medecinChoisi.prenom} ${medecinChoisi.nom}`,
+      medecinProfession: medecinChoisi.profession,
+      date: form.date,
+      heure: form.heure,
+      motif: form.motif,
+      type: form.type,
+      statut: "en_attente",
+      createdAt: new Date().toISOString(),
+    };
+    rdvList.push(nouveau);
+    DB.set("mes_rdv", rdvList);
+    setMedecinChoisi(null);
+    charger();
+    toast.add(`RDV demandé avec Dr. ${medecinChoisi.prenom} ${medecinChoisi.nom} le ${form.date} à ${form.heure}`, "success");
+  };
+
+  const annulerRdv = (id) => {
+    const rdvList = DB.get("mes_rdv").map(r => r.id === id ? { ...r, statut: "annule" } : r);
+    DB.set("mes_rdv", rdvList);
+    charger();
+    toast.add("Rendez-vous annulé", "info");
+  };
+
+  const filtresMed = medecins.filter(m =>
+    `${m.prenom} ${m.nom} ${m.profession} ${m.hopital}`.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const rdvAVenir = mesRdv.filter(r => r.statut !== "annule" && r.statut !== "termine");
+  const rdvPasses = mesRdv.filter(r => r.statut === "termine" || r.statut === "annule");
+
+  const typeLabel = { presentiel: "🏥 Présentiel", domicile: "🏠 À domicile", teleconsult: "📱 Téléconsultation" };
+
+  return (
+    <div>
+      {medecinChoisi && (
+        <RdvModal medecin={medecinChoisi} patient={user} onClose={()=>setMedecinChoisi(null)} onConfirm={demanderRdv} toast={toast}/>
+      )}
+
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:20 }}>
+        <h2 style={{ margin:0, fontSize:20, fontWeight:800, color:"#0f172a" }}>Rendez-vous</h2>
+        <div style={{ display:"flex", gap:6 }}>
+          {[{k:"liste_medecins",label:"Médecins"},{k:"mes_rdv",label:`Mes RDV (${rdvAVenir.length})`}].map(v=>(
+            <button key={v.k} onClick={()=>setVue(v.k)} style={{ padding:"7px 14px", border:"none", borderRadius:20, cursor:"pointer", fontSize:12, fontWeight:700,
+              background:vue===v.k?"#0ea5e9":"#e2e8f0", color:vue===v.k?"#fff":"#64748b" }}>
+              {v.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {vue === "liste_medecins" && (
+        <>
+          <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍 Rechercher un médecin..."
+            style={{ width:"100%", padding:"11px 16px", border:"2px solid #e2e8f0", borderRadius:12, fontSize:14, boxSizing:"border-box", marginBottom:16 }}/>
+          {filtresMed.length === 0 ? (
+            <div style={{ textAlign:"center", padding:48, color:"#94a3b8" }}>
+              <Icon name="stethoscope" size={48} color="#cbd5e1"/>
+              <p>Aucun médecin trouvé</p>
+            </div>
+          ) : filtresMed.map(m => (
+            <div key={m.id} style={{ background:"#fff", borderRadius:16, padding:18, marginBottom:12, border:"1px solid #e2e8f0", boxShadow:"0 2px 8px rgba(0,0,0,0.04)" }}>
+              <div style={{ display:"flex", gap:14, marginBottom:14 }}>
+                {m.photo
+                  ? <img src={m.photo} style={{ width:54, height:54, borderRadius:"50%", objectFit:"cover", border:"2px solid #10b981" }}/>
+                  : <div style={{ width:54, height:54, background:"#10b98120", borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}><Icon name="user" size={24} color="#10b981"/></div>
+                }
+                <div style={{ flex:1 }}>
+                  <div style={{ fontWeight:800, fontSize:15, color:"#0f172a" }}>Dr. {m.prenom} {m.nom}</div>
+                  <div style={{ fontSize:13, color:"#10b981", fontWeight:600 }}>{m.profession}</div>
+                  <div style={{ fontSize:12, color:"#64748b" }}>{m.experience} ans d'exp · {m.hopital || "Clinique privée"}</div>
+                </div>
+              </div>
+              <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+                <span style={{ fontSize:11, background:"#f0fdf4", color:"#059669", padding:"3px 10px", borderRadius:100, fontWeight:600 }}>🏥 Présentiel</span>
+                <span style={{ fontSize:11, background:"#e0f2fe", color:"#0284c7", padding:"3px 10px", borderRadius:100, fontWeight:600 }}>📱 Téléconsultation</span>
+                <span style={{ fontSize:11, background:"#fef3c7", color:"#d97706", padding:"3px 10px", borderRadius:100, fontWeight:600 }}>🏠 Domicile</span>
+              </div>
+              <button onClick={()=>setMedecinChoisi(m)} style={{ marginTop:12, width:"100%", padding:"11px", border:"none", borderRadius:11, background:"linear-gradient(135deg,#0ea5e9,#0284c7)", color:"#fff", cursor:"pointer", fontSize:14, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center", gap:7 }}>
+                <Icon name="calendar" size={16} color="#fff"/> Prendre rendez-vous
+              </button>
+            </div>
+          ))}
+        </>
+      )}
+
+      {vue === "mes_rdv" && (
+        <>
+          {mesRdv.length === 0 ? (
+            <div style={{ textAlign:"center", padding:48, color:"#94a3b8" }}>
+              <Icon name="calendar" size={52} color="#cbd5e1"/>
+              <h3 style={{ color:"#94a3b8" }}>Aucun rendez-vous</h3>
+              <p style={{ fontSize:14 }}>Cliquez sur "Médecins" pour prendre votre premier RDV</p>
+            </div>
+          ) : (
+            <>
+              {rdvAVenir.length > 0 && (
+                <>
+                  <h3 style={{ margin:"0 0 12px", fontSize:15, fontWeight:700, color:"#0f172a" }}>À venir</h3>
+                  {rdvAVenir.map(r => (
+                    <div key={r.id} style={{ background:"#fff", borderRadius:16, padding:18, marginBottom:12, border:"2px solid #e0f2fe", boxShadow:"0 2px 10px rgba(14,165,233,0.08)" }}>
+                      <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", marginBottom:12 }}>
+                        <div>
+                          <div style={{ fontWeight:800, fontSize:15, color:"#0f172a" }}>Dr. {r.medecinNom}</div>
+                          <div style={{ fontSize:12, color:"#64748b" }}>{r.medecinProfession}</div>
+                        </div>
+                        <StatusBadge status={r.statut}/>
+                      </div>
+                      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:12 }}>
+                        {[[<Icon name="calendar" size={13} color="#0ea5e9"/>, new Date(r.date).toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"})],
+                          [<Icon name="clock" size={13} color="#0ea5e9"/>, r.heure],
+                          [<span style={{fontSize:12}}>🏷</span>, typeLabel[r.type] || r.type],
+                          [<Icon name="info" size={13} color="#0ea5e9"/>, r.motif]
+                        ].map(([ic,txt],i)=>(
+                          <div key={i} style={{ display:"flex", alignItems:"center", gap:6, fontSize:13, color:"#374151", background:"#f8fafc", padding:"7px 10px", borderRadius:8 }}>
+                            {ic}<span style={{ fontWeight:i===3?400:600 }}>{txt}</span>
+                          </div>
+                        ))}
+                      </div>
+                      {r.statut === "en_attente" && (
+                        <button onClick={()=>annulerRdv(r.id)} style={{ width:"100%", padding:"9px", border:"2px solid #fecaca", borderRadius:10, background:"#fff5f5", color:"#ef4444", cursor:"pointer", fontSize:13, fontWeight:700 }}>
+                          Annuler ce rendez-vous
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </>
+              )}
+              {rdvPasses.length > 0 && (
+                <>
+                  <h3 style={{ margin:"16px 0 12px", fontSize:15, fontWeight:700, color:"#94a3b8" }}>Historique</h3>
+                  {rdvPasses.map(r => (
+                    <div key={r.id} style={{ background:"#f8fafc", borderRadius:14, padding:16, marginBottom:8, border:"1px solid #e2e8f0", opacity:0.8 }}>
+                      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                        <div>
+                          <div style={{ fontWeight:700, fontSize:14, color:"#475569" }}>Dr. {r.medecinNom}</div>
+                          <div style={{ fontSize:12, color:"#94a3b8" }}>{new Date(r.date).toLocaleDateString("fr-FR")} · {r.heure}</div>
+                        </div>
+                        <StatusBadge status={r.statut}/>
+                      </div>
+                    </div>
+                  ))}
+                </>
+              )}
+            </>
+          )}
+        </>
+      )}
+    </div>
+  );
+};
+
+// ─────────────────────────────────────────────
+//  ONGLET RDV MÉDECIN
+// ─────────────────────────────────────────────
+const RdvMedecinTab = ({ user, toast }) => {
+  const [rdvList, setRdvList] = useState([]);
+  const [filtre, setFiltre] = useState("tous");
+
+  const charger = () => {
+    setRdvList(DB.get("mes_rdv").filter(r => r.medecinId === user.id));
+  };
+  useEffect(() => { charger(); }, [user.id]);
+
+  const changerStatut = (id, statut) => {
+    const list = DB.get("mes_rdv").map(r => r.id === id ? { ...r, statut } : r);
+    DB.set("mes_rdv", list);
+    charger();
+    const msgs = { confirme:"RDV confirmé ✓", annule:"RDV annulé", termine:"RDV marqué terminé" };
+    toast.add(msgs[statut] || "Statut mis à jour", statut === "confirme" ? "success" : "info");
+  };
+
+  const filtres = [
+    { k:"tous", label:"Tous" },
+    { k:"en_attente", label:"En attente" },
+    { k:"confirme", label:"Confirmés" },
+    { k:"termine", label:"Terminés" },
+    { k:"annule", label:"Annulés" },
+  ];
+
+  const affichage = filtre === "tous" ? rdvList : rdvList.filter(r => r.statut === filtre);
+  const nbAttente = rdvList.filter(r => r.statut === "en_attente").length;
+  const typeLabel = { presentiel:"🏥 Présentiel", domicile:"🏠 Domicile", teleconsult:"📱 Téléconsultation" };
+
+  return (
+    <div>
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:16 }}>
+        <h2 style={{ margin:0, fontSize:20, fontWeight:800, color:"#0f172a" }}>Mes Rendez-vous</h2>
+        {nbAttente > 0 && (
+          <span style={{ background:"#ef4444", color:"#fff", borderRadius:100, padding:"3px 10px", fontSize:12, fontWeight:700 }}>
+            {nbAttente} en attente
+          </span>
+        )}
+      </div>
+
+      {/* Filtres */}
+      <div style={{ display:"flex", gap:6, overflowX:"auto", paddingBottom:4, marginBottom:18 }}>
+        {filtres.map(f => (
+          <button key={f.k} onClick={()=>setFiltre(f.k)} style={{ padding:"7px 14px", border:"none", borderRadius:20, cursor:"pointer", fontSize:12, fontWeight:700, whiteSpace:"nowrap",
+            background:filtre===f.k?"#10b981":"#e2e8f0", color:filtre===f.k?"#fff":"#64748b" }}>
+            {f.label}
+          </button>
+        ))}
+      </div>
+
+      {affichage.length === 0 ? (
+        <div style={{ textAlign:"center", padding:48, color:"#94a3b8" }}>
+          <Icon name="calendar" size={52} color="#cbd5e1"/>
+          <p>Aucun rendez-vous {filtre !== "tous" ? `"${filtres.find(f=>f.k===filtre)?.label}"` : ""}</p>
+        </div>
+      ) : affichage.sort((a,b)=>new Date(a.date)-new Date(b.date)).map(r => (
+        <div key={r.id} style={{ background:"#fff", borderRadius:16, padding:18, marginBottom:14, border:`2px solid ${r.statut==="en_attente"?"#fbbf24":r.statut==="confirme"?"#10b981":"#e2e8f0"}`, boxShadow:"0 2px 10px rgba(0,0,0,0.04)" }}>
+          {/* En-tête patient */}
+          <div style={{ display:"flex", gap:12, alignItems:"center", marginBottom:14 }}>
+            <div style={{ width:44, height:44, background:"#0ea5e920", borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+              <Icon name="user" size={20} color="#0ea5e9"/>
+            </div>
+            <div style={{ flex:1 }}>
+              <div style={{ fontWeight:800, fontSize:15, color:"#0f172a" }}>{r.patientNom}</div>
+              <div style={{ fontSize:12, color:"#64748b" }}>📞 {r.patientTel}</div>
+            </div>
+            <StatusBadge status={r.statut}/>
+          </div>
+
+          {/* Détails */}
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginBottom:14 }}>
+            {[[<Icon name="calendar" size={13} color="#10b981"/>, new Date(r.date).toLocaleDateString("fr-FR",{weekday:"short",day:"numeric",month:"short"})],
+              [<Icon name="clock" size={13} color="#10b981"/>, r.heure],
+              [<span>🏷</span>, typeLabel[r.type] || r.type],
+              [<Icon name="info" size={13} color="#10b981"/>, r.motif]
+            ].map(([ic,txt],i)=>(
+              <div key={i} style={{ display:"flex", alignItems:"center", gap:6, fontSize:12, color:"#374151", background:"#f8fafc", padding:"7px 10px", borderRadius:8 }}>
+                {ic}<span>{txt}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Actions selon statut */}
+          {r.statut === "en_attente" && (
+            <div style={{ display:"flex", gap:8 }}>
+              <button onClick={()=>changerStatut(r.id,"annule")} style={{ flex:1, padding:"10px", border:"2px solid #fecaca", borderRadius:10, background:"#fff5f5", color:"#ef4444", cursor:"pointer", fontSize:13, fontWeight:700 }}>
+                ✗ Refuser
+              </button>
+              <button onClick={()=>changerStatut(r.id,"confirme")} style={{ flex:2, padding:"10px", border:"none", borderRadius:10, background:"linear-gradient(135deg,#10b981,#059669)", color:"#fff", cursor:"pointer", fontSize:13, fontWeight:700 }}>
+                ✓ Confirmer le RDV
+              </button>
+            </div>
+          )}
+          {r.statut === "confirme" && (
+            <div style={{ display:"flex", gap:8 }}>
+              <a href={`tel:${r.patientTel}`} style={{ flex:1, padding:"10px", border:"2px solid #0ea5e9", borderRadius:10, background:"#e0f2fe", color:"#0284c7", cursor:"pointer", fontSize:13, fontWeight:700, textDecoration:"none", display:"flex", alignItems:"center", justifyContent:"center", gap:5 }}>
+                <Icon name="phone" size={14} color="#0284c7"/> Appeler
+              </a>
+              <button onClick={()=>changerStatut(r.id,"termine")} style={{ flex:2, padding:"10px", border:"none", borderRadius:10, background:"linear-gradient(135deg,#6366f1,#4f46e5)", color:"#fff", cursor:"pointer", fontSize:13, fontWeight:700 }}>
+                ✓ Marquer terminé
+              </button>
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+};
+
+// ─────────────────────────────────────────────
+//  CARTE GUINÉE SVG
+// ─────────────────────────────────────────────
+const CarteGuinee = () => (
+  <div style={{ position:"relative", width:"100%", maxWidth:420, margin:"0 auto" }}>
+    <svg viewBox="0 0 400 420" style={{ width:"100%", filter:"drop-shadow(0 8px 32px rgba(14,165,233,0.18))" }}>
+      <defs>
+        <linearGradient id="mapGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#0ea5e9" stopOpacity="0.18"/>
+          <stop offset="100%" stopColor="#10b981" stopOpacity="0.22"/>
+        </linearGradient>
+        <linearGradient id="mapBorder" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#0ea5e9"/>
+          <stop offset="100%" stopColor="#10b981"/>
+        </linearGradient>
+        <filter id="glow">
+          <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+          <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+      </defs>
+
+      {/* Fond carte simplifié Guinée */}
+      <path d="
+        M 100 30
+        L 130 25 L 160 20 L 190 18 L 220 22 L 250 28 L 275 35
+        L 290 50 L 300 70 L 295 90 L 285 110 L 290 130
+        L 300 150 L 305 170 L 295 195 L 280 215 L 265 235
+        L 255 255 L 250 275 L 245 295 L 235 315 L 220 330
+        L 205 345 L 190 360 L 180 375 L 175 390
+        L 160 380 L 145 365 L 130 350 L 115 335 L 100 315
+        L 85 295 L 75 270 L 65 245 L 60 220 L 55 195
+        L 50 170 L 55 145 L 60 120 L 65 95 L 70 70
+        L 80 50 Z
+      " fill="url(#mapGrad)" stroke="url(#mapBorder)" strokeWidth="2.5" strokeLinejoin="round" filter="url(#glow)"/>
+
+      {/* Régions intérieures */}
+      <path d="M 100 30 L 130 25 L 160 80 L 130 100 L 90 85 L 70 70 L 80 50 Z" fill="#0ea5e9" fillOpacity="0.12" stroke="#0ea5e9" strokeWidth="1" strokeDasharray="4,3"/>
+      <path d="M 160 20 L 275 35 L 285 110 L 220 120 L 160 80 Z" fill="#10b981" fillOpacity="0.1" stroke="#10b981" strokeWidth="1" strokeDasharray="4,3"/>
+      <path d="M 55 145 L 160 80 L 220 120 L 265 235 L 175 260 L 60 220 Z" fill="#6366f1" fillOpacity="0.08" stroke="#6366f1" strokeWidth="1" strokeDasharray="4,3"/>
+      <path d="M 60 220 L 175 260 L 180 375 L 115 335 L 65 245 Z" fill="#f59e0b" fillOpacity="0.1" stroke="#f59e0b" strokeWidth="1" strokeDasharray="4,3"/>
+
+      {/* Points villes principales */}
+      {[
+        { x:178, y:155, label:"Conakry", capital:true },
+        { x:235, y:95,  label:"Kindia", capital:false },
+        { x:260, y:160, label:"Kankan", capital:false },
+        { x:120, y:130, label:"Labé",   capital:false },
+        { x:200, y:290, label:"N'Zérékoré", capital:false },
+        { x:145, y:220, label:"Faranah", capital:false },
+      ].map(({ x, y, label, capital }) => (
+        <g key={label}>
+          {capital && (
+            <>
+              <circle cx={x} cy={y} r={14} fill="#0ea5e9" fillOpacity="0.15" stroke="#0ea5e9" strokeWidth="1.5"/>
+              <circle cx={x} cy={y} r={7}  fill="#0ea5e9" fillOpacity="0.3"/>
+            </>
+          )}
+          <circle cx={x} cy={y} r={capital ? 5 : 4} fill={capital ? "#0ea5e9" : "#10b981"} stroke="#fff" strokeWidth="2"/>
+          <text x={x + (capital ? 10 : 8)} y={y + 4} fontSize={capital ? 11 : 9.5} fontWeight={capital ? 800 : 600}
+            fill={capital ? "#0284c7" : "#059669"} fontFamily="Outfit,sans-serif">
+            {label}
+          </text>
+          {capital && (
+            <text x={x + 10} y={y + 16} fontSize={8} fill="#64748b" fontFamily="Outfit,sans-serif">Capitale</text>
+          )}
+        </g>
+      ))}
+
+      {/* Nom du pays */}
+      <text x={175} y={410} textAnchor="middle" fontSize={13} fontWeight={800} fill="#0f172a" fontFamily="Outfit,sans-serif" letterSpacing="1">
+        GUINÉE
+      </text>
+      <text x={175} y={422} textAnchor="middle" fontSize={9} fill="#64748b" fontFamily="Outfit,sans-serif">
+        République de Guinée · Afrique de l'Ouest
+      </text>
+    </svg>
+
+    {/* Légende */}
+    <div style={{ display:"flex", justifyContent:"center", gap:16, marginTop:10, flexWrap:"wrap" }}>
+      {[
+        { color:"#0ea5e9", label:"Conakry (Capitale)" },
+        { color:"#10b981", label:"Villes principales" },
+      ].map(l => (
+        <div key={l.label} style={{ display:"flex", alignItems:"center", gap:5, fontSize:11, color:"#64748b" }}>
+          <span style={{ width:8, height:8, borderRadius:"50%", background:l.color, display:"inline-block" }}/>
+          {l.label}
+        </div>
+      ))}
+    </div>
+  </div>
+);
+
+// ─────────────────────────────────────────────
+//  AVATARS MÉDECINS ILLUSTRÉS
+// ─────────────────────────────────────────────
+const AvatarDocteur = ({ size = 90 }) => (
+  <svg width={size} height={size} viewBox="0 0 120 120" fill="none">
+    <circle cx="60" cy="60" r="60" fill="#e0f2fe"/>
+    {/* Corps blouse blanche */}
+    <rect x="30" y="72" width="60" height="48" rx="14" fill="#fff" stroke="#bae6fd" strokeWidth="1.5"/>
+    {/* Col blouse */}
+    <path d="M50 72 L60 82 L70 72" fill="none" stroke="#0ea5e9" strokeWidth="2"/>
+    {/* Stéthoscope */}
+    <path d="M40 85 Q38 100 45 105 Q52 110 55 100 L55 92" stroke="#0ea5e9" strokeWidth="2" fill="none" strokeLinecap="round"/>
+    <circle cx="44" cy="85" r="4" fill="#0ea5e9" fillOpacity="0.3" stroke="#0ea5e9" strokeWidth="1.5"/>
+    <circle cx="55" cy="91" r="3" fill="#0ea5e9"/>
+    {/* Tête */}
+    <circle cx="60" cy="45" r="22" fill="#c6895a"/>
+    {/* Visage souriant */}
+    <circle cx="53" cy="43" r="2.5" fill="#1e293b"/>
+    <circle cx="67" cy="43" r="2.5" fill="#1e293b"/>
+    <path d="M53 52 Q60 58 67 52" stroke="#1e293b" strokeWidth="1.8" fill="none" strokeLinecap="round"/>
+    {/* Cheveux */}
+    <path d="M38 42 Q40 22 60 20 Q80 22 82 42 Q78 32 60 30 Q42 32 38 42Z" fill="#1e293b"/>
+    {/* Badge médecin */}
+    <rect x="68" y="80" width="20" height="12" rx="3" fill="#0ea5e9"/>
+    <text x="78" y="89" textAnchor="middle" fontSize="6" fill="#fff" fontFamily="sans-serif" fontWeight="bold">Dr.</text>
+    {/* Croix médicale sur blouse */}
+    <path d="M56 95 H64 M60 91 V99" stroke="#0ea5e9" strokeWidth="2" strokeLinecap="round"/>
+  </svg>
+);
+
+const AvatarSageFemme = ({ size = 90 }) => (
+  <svg width={size} height={size} viewBox="0 0 120 120" fill="none">
+    <circle cx="60" cy="60" r="60" fill="#f0fdf4"/>
+    {/* Corps uniforme vert */}
+    <rect x="30" y="72" width="60" height="48" rx="14" fill="#10b981" fillOpacity="0.9"/>
+    {/* Col */}
+    <path d="M50 72 L60 80 L70 72" fill="none" stroke="#fff" strokeWidth="2"/>
+    {/* Croix médicale */}
+    <path d="M56 88 H64 M60 84 V92" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"/>
+    {/* Tête */}
+    <circle cx="60" cy="45" r="22" fill="#c6895a"/>
+    {/* Visage */}
+    <circle cx="53" cy="43" r="2.5" fill="#1e293b"/>
+    <circle cx="67" cy="43" r="2.5" fill="#1e293b"/>
+    <path d="M53 52 Q60 58 67 52" stroke="#1e293b" strokeWidth="1.8" fill="none" strokeLinecap="round"/>
+    {/* Cheveux longs */}
+    <path d="M38 42 Q40 22 60 20 Q80 22 82 42 Q80 70 75 75 Q78 50 78 42 Q70 30 60 30 Q50 30 42 42 Q42 50 45 75 Q40 70 38 42Z" fill="#1a0a00"/>
+    {/* Bonnet infirmière */}
+    <rect x="42" y="20" width="36" height="12" rx="4" fill="#fff" stroke="#10b981" strokeWidth="1.5"/>
+    <path d="M55 20 H65 M60 15 V20" stroke="#10b981" strokeWidth="2" strokeLinecap="round"/>
+    {/* Stéthoscope */}
+    <path d="M78 85 Q82 98 75 105 Q68 110 65 100 L65 93" stroke="#fff" strokeWidth="1.8" fill="none" strokeLinecap="round"/>
+    <circle cx="77" cy="85" r="3.5" fill="#fff" fillOpacity="0.4" stroke="#fff" strokeWidth="1.5"/>
+    <circle cx="65" cy="92" r="2.5" fill="#fff"/>
+  </svg>
+);
+
+const AvatarPatient = ({ size = 80, genre = "homme" }) => (
+  <svg width={size} height={size} viewBox="0 0 120 120" fill="none">
+    <circle cx="60" cy="60" r="60" fill="#f8fafc"/>
+    {/* Corps */}
+    <rect x="28" y="75" width="64" height="45" rx="14" fill={genre === "femme" ? "#f472b6" : "#3b82f6"} fillOpacity="0.8"/>
+    {/* Tête */}
+    <circle cx="60" cy="47" r="24" fill="#d4956a"/>
+    {/* Yeux */}
+    <circle cx="52" cy="45" r="2.8" fill="#1e293b"/>
+    <circle cx="68" cy="45" r="2.8" fill="#1e293b"/>
+    {/* Sourire */}
+    <path d="M52 54 Q60 60 68 54" stroke="#1e293b" strokeWidth="1.8" fill="none" strokeLinecap="round"/>
+    {/* Cheveux */}
+    {genre === "femme"
+      ? <path d="M36 44 Q38 22 60 20 Q82 22 84 44 Q82 72 78 78 Q82 55 82 44 Q72 28 60 28 Q48 28 38 44 Q38 55 42 78 Q38 72 36 44Z" fill="#1a0a00"/>
+      : <path d="M36 42 Q40 22 60 20 Q80 22 84 42 Q80 30 60 28 Q40 30 36 42Z" fill="#1a0a00"/>
+    }
+  </svg>
+);
+
+// ─────────────────────────────────────────────
+//  SECTION ÉQUIPE MÉDICALE
+// ─────────────────────────────────────────────
+const SectionEquipe = () => (
+  <div style={{ marginTop:56, padding:"40px 24px", background:"rgba(255,255,255,0.6)", borderRadius:24, border:"1px solid rgba(14,165,233,0.12)" }}>
+    <div style={{ textAlign:"center", marginBottom:32 }}>
+      <h2 style={{ margin:"0 0 8px", fontSize:24, fontWeight:900, color:"#0f172a" }}>Notre Équipe Médicale</h2>
+      <p style={{ color:"#64748b", fontSize:14 }}>Des professionnels de santé qualifiés à votre service en Guinée</p>
+    </div>
+    <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(200px,1fr))", gap:20 }}>
+      {[
+        { Avatar: AvatarDocteur, nom:"Dr. Mamadou Diallo", spec:"Médecin Généraliste", exp:"12 ans", hop:"CHU Conakry", color:"#0ea5e9" },
+        { Avatar: AvatarSageFemme, nom:"Sage-F. Fatoumata Camara", spec:"Sage-femme", exp:"8 ans", hop:"Clinique Mère & Enfant", color:"#10b981" },
+        { Avatar: AvatarDocteur, nom:"Dr. Ibrahima Kouyaté", spec:"Pédiatre", exp:"15 ans", hop:"Hôpital Ignace Deen", color:"#6366f1" },
+      ].map(({ Avatar, nom, spec, exp, hop, color }) => (
+        <div key={nom} style={{ background:"#fff", borderRadius:18, padding:22, textAlign:"center", border:`1px solid ${color}20`, boxShadow:"0 4px 16px rgba(0,0,0,0.06)", transition:"transform 0.2s" }}
+          onMouseEnter={e=>e.currentTarget.style.transform="translateY(-4px)"}
+          onMouseLeave={e=>e.currentTarget.style.transform=""}>
+          <div style={{ display:"flex", justifyContent:"center", marginBottom:14 }}>
+            <div style={{ borderRadius:"50%", overflow:"hidden", border:`3px solid ${color}`, boxShadow:`0 0 0 4px ${color}15` }}>
+              <Avatar size={90}/>
+            </div>
+          </div>
+          <div style={{ fontWeight:800, fontSize:14, color:"#0f172a", marginBottom:3 }}>{nom}</div>
+          <div style={{ fontSize:13, color, fontWeight:600, marginBottom:4 }}>{spec}</div>
+          <div style={{ fontSize:11, color:"#64748b" }}>{exp} d'expérience</div>
+          <div style={{ fontSize:11, color:"#94a3b8", marginTop:2 }}>{hop}</div>
+          <div style={{ marginTop:12, display:"flex", gap:4, justifyContent:"center", flexWrap:"wrap" }}>
+            <span style={{ fontSize:10, background:color+"15", color, padding:"3px 9px", borderRadius:100, fontWeight:600 }}>✓ Disponible</span>
+            <span style={{ fontSize:10, background:"#f0fdf4", color:"#059669", padding:"3px 9px", borderRadius:100, fontWeight:600 }}>RDV en ligne</span>
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+);
+
+// ─────────────────────────────────────────────
+//  LANDING PAGE
+// ─────────────────────────────────────────────
+const LandingPage = ({ onSelect }) => (
+  <div style={{ minHeight:"100vh", background:"linear-gradient(160deg,#f0f9ff 0%,#e0f2fe 40%,#f0fdf4 100%)", fontFamily:"'Outfit',sans-serif" }}>
+    <header style={{ background:"rgba(255,255,255,0.9)", backdropFilter:"blur(20px)", borderBottom:"1px solid rgba(14,165,233,0.15)", padding:"16px 24px", display:"flex", alignItems:"center" }}>
+      <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+        <div style={{ width:40, height:40, background:"linear-gradient(135deg,#0ea5e9,#10b981)", borderRadius:12, display:"flex", alignItems:"center", justifyContent:"center" }}>
+          <Icon name="heart" size={22} color="#fff"/>
+        </div>
+        <div>
+          <div style={{ fontWeight:800, fontSize:18, color:"#0f172a", letterSpacing:"-0.5px" }}>Mon Espace Santé</div>
+          <div style={{ fontSize:11, color:"#64748b" }}>République de Guinée</div>
+        </div>
+      </div>
+    </header>
+    <div style={{ maxWidth:900, margin:"0 auto", padding:"60px 24px 40px" }}>
+      <div style={{ textAlign:"center", marginBottom:60 }}>
+        <div style={{ display:"inline-flex", alignItems:"center", gap:6, background:"rgba(14,165,233,0.1)", border:"1px solid rgba(14,165,233,0.3)", borderRadius:100, padding:"6px 16px", marginBottom:20 }}>
+          <Icon name="heart" size={14} color="#0ea5e9"/>
+          <span style={{ fontSize:13, color:"#0ea5e9", fontWeight:600 }}>Votre santé, notre priorité</span>
+        </div>
+        <h1 style={{ fontSize:"clamp(32px,6vw,56px)", fontWeight:900, color:"#0f172a", margin:"0 0 16px", lineHeight:1.1, letterSpacing:"-1px" }}>
+          Mon Espace<br/>
+          <span style={{ background:"linear-gradient(135deg,#0ea5e9,#10b981)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent" }}>Santé</span>
+        </h1>
+        <p style={{ fontSize:18, color:"#475569", maxWidth:540, margin:"0 auto 40px", lineHeight:1.7 }}>
+          La plateforme médicale sécurisée de Guinée. Gérez votre dossier santé, prenez rendez-vous et consultez un médecin.
+        </p>
+      </div>
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(260px,1fr))", gap:20 }}>
+        {[
+          { role:"patient", icon:"user", color:"#0ea5e9", grad:"linear-gradient(135deg,#0ea5e9,#0284c7)", title:"Espace Patient",
+            desc:"Dossier médical sécurisé, prise de rendez-vous et consultations en ligne.",
+            features:["Dossier médical personnel","Prise de rendez-vous","Historique des examens","Espace conseil"] },
+          { role:"medecin", icon:"stethoscope", color:"#10b981", grad:"linear-gradient(135deg,#10b981,#059669)", title:"Espace Médecin",
+            desc:"Gérez vos patients, confirmez les RDV et envoyez des documents médicaux.",
+            features:["Gestion des rendez-vous","Confirmation / Refus RDV","Scan & transfert docs","Consultation à distance"] },
+          { role:"conseil", icon:"phone", color:"#8b5cf6", grad:"linear-gradient(135deg,#8b5cf6,#7c3aed)", title:"Espace Conseil",
+            desc:"Contactez un médecin directement par appel Orange / MTN.",
+            features:["Annuaire médecins","Appels directs Orange/MTN","Conseils nutrition","Disponibilité 24h/7j"] },
+        ].map(c=>(
+          <div key={c.role} onClick={()=>onSelect(c.role)} style={{ background:"#fff", borderRadius:20, padding:28, cursor:"pointer", border:"2px solid rgba(0,0,0,0.06)", transition:"all 0.25s", boxShadow:"0 4px 20px rgba(0,0,0,0.06)" }}
+            onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-6px)";e.currentTarget.style.boxShadow=`0 20px 40px ${c.color}25`;e.currentTarget.style.borderColor=c.color;}}
+            onMouseLeave={e=>{e.currentTarget.style.transform="";e.currentTarget.style.boxShadow="0 4px 20px rgba(0,0,0,0.06)";e.currentTarget.style.borderColor="rgba(0,0,0,0.06)";}}>
+            <div style={{ width:56, height:56, background:c.grad, borderRadius:16, display:"flex", alignItems:"center", justifyContent:"center", marginBottom:18 }}>
+              <Icon name={c.icon} size={26} color="#fff"/>
+            </div>
+            <h3 style={{ margin:"0 0 10px", fontSize:20, fontWeight:800, color:"#0f172a" }}>{c.title}</h3>
+            <p style={{ margin:"0 0 18px", color:"#64748b", fontSize:14, lineHeight:1.6 }}>{c.desc}</p>
+            <ul style={{ margin:0, padding:0, listStyle:"none", marginBottom:20 }}>
+              {c.features.map(f=>(
+                <li key={f} style={{ display:"flex", alignItems:"center", gap:8, marginBottom:6, fontSize:13, color:"#475569" }}>
+                  <div style={{ width:18, height:18, background:c.color+"20", borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+                    <Icon name="check" size={10} color={c.color}/>
+                  </div>
+                  {f}
+                </li>
+              ))}
+            </ul>
+            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", background:c.color+"10", borderRadius:12, padding:"12px 16px" }}>
+              <span style={{ fontSize:14, fontWeight:700, color:c.color }}>Accéder</span>
+              <Icon name="arrow" size={18} color={c.color}/>
+            </div>
+          </div>
+        ))}
+      </div>
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:16, marginTop:48 }}>
+        {[["500+","Médecins"],["10K+","Patients"],["100%","Sécurisé"]].map(([n,l])=>(
+          <div key={l} style={{ textAlign:"center", padding:"20px 16px", background:"rgba(255,255,255,0.7)", borderRadius:16, border:"1px solid rgba(14,165,233,0.15)" }}>
+            <div style={{ fontSize:28, fontWeight:900, color:"#0ea5e9" }}>{n}</div>
+            <div style={{ fontSize:13, color:"#64748b", fontWeight:500 }}>{l}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
+);
+
+// ─────────────────────────────────────────────
+//  AUTH
+// ─────────────────────────────────────────────
+const AuthModal = ({ role, onBack, onLogin, toast }) => {
+  const [mode, setMode] = useState("login");
+  const [form, setForm] = useState({});
+  const [showPass, setShowPass] = useState(false);
+  const set = (k,v) => setForm(p=>({...p,[k]:v}));
+
+  const patientFields = [
+    {k:"nom",label:"Nom",type:"text"},{k:"prenom",label:"Prénom",type:"text"},
+    {k:"dob",label:"Date de naissance",type:"date"},{k:"quartier",label:"Quartier / Ville",type:"text"},
+    {k:"tel",label:"Téléphone",type:"tel"},{k:"email",label:"Email (optionnel)",type:"email"},
+    {k:"pin",label:"Code PIN",type:"password"},{k:"pin2",label:"Confirmer PIN",type:"password"},
+  ];
+  const medecinFields = [
+    {k:"nom",label:"Nom",type:"text"},{k:"prenom",label:"Prénom",type:"text"},
+    {k:"dob",label:"Date de naissance",type:"date"},{k:"lieu_naissance",label:"Lieu de naissance",type:"text"},
+    {k:"profession",label:"Profession",type:"select",opts:["Médecin Généraliste","Médecin Spécialiste","Sage-femme","Infirmier(e)","Chirurgien","Pédiatre","Cardiologue","Gynécologue"]},
+    {k:"experience",label:"Années d'expérience",type:"number"},{k:"hopital",label:"Hôpital / Clinique",type:"text"},
+    {k:"email",label:"Email professionnel",type:"email"},{k:"tel",label:"Téléphone",type:"tel"},
+    {k:"pin",label:"Mot de passe",type:"password"},{k:"pin2",label:"Confirmer mot de passe",type:"password"},
+  ];
+  const fields = role === "patient" ? patientFields : medecinFields;
+  const colors = {patient:"#0ea5e9",medecin:"#10b981"};
+  const color = colors[role]||"#8b5cf6";
+
+  const register = () => {
+    if (!form.nom||!form.prenom||!form.pin){toast.add("Veuillez remplir tous les champs requis","error");return;}
+    if (form.pin!==form.pin2){toast.add("Les mots de passe ne correspondent pas","error");return;}
+    const key = role==="patient"?"mes_patients":"mes_medecins";
+    const list = DB.get(key);
+    const id = Date.now().toString();
+    const newUser = {...form,id,role,pin:hashPin(form.pin),createdAt:new Date().toISOString()};
+    delete newUser.pin2;
+    list.push(newUser);
+    DB.set(key,list);
+    toast.add(`Compte créé! Bienvenue ${form.prenom}`,"success");
+    onLogin(newUser);
+  };
+  const login = () => {
+    const key = role==="patient"?"mes_patients":"mes_medecins";
+    const list = DB.get(key);
+    const user = list.find(u=>(u.tel===form.identifier||u.email===form.identifier)&&u.pin===hashPin(form.pin));
+    if(!user){toast.add("Identifiants incorrects","error");return;}
+    toast.add(`Bienvenue ${user.prenom}!`,"success");
+    onLogin(user);
+  };
+
+  return (
+    <div style={{ minHeight:"100vh", background:"linear-gradient(160deg,#f0f9ff,#f0fdf4)", fontFamily:"'Outfit',sans-serif", display:"flex", flexDirection:"column" }}>
+      <header style={{ background:"#fff", borderBottom:"1px solid #e2e8f0", padding:"14px 20px", display:"flex", alignItems:"center", gap:12 }}>
+        <button onClick={onBack} style={{ background:"none", border:"none", cursor:"pointer", color:"#64748b", fontSize:14 }}>← Retour</button>
+        <div style={{ width:36, height:36, background:`linear-gradient(135deg,${color},${color}cc)`, borderRadius:10, display:"flex", alignItems:"center", justifyContent:"center" }}>
+          <Icon name={role==="patient"?"user":"stethoscope"} size={18} color="#fff"/>
+        </div>
+        <span style={{ fontWeight:700, color:"#0f172a" }}>Espace {role==="patient"?"Patient":"Médecin"}</span>
+      </header>
+      <div style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
+        <div style={{ background:"#fff", borderRadius:24, padding:32, maxWidth:480, width:"100%", boxShadow:"0 4px 40px rgba(0,0,0,0.1)", maxHeight:"80vh", overflowY:"auto" }}>
+          <div style={{ display:"flex", gap:0, marginBottom:28, background:"#f1f5f9", borderRadius:12, padding:4 }}>
+            {["login","register"].map(m=>(
+              <button key={m} onClick={()=>setMode(m)} style={{ flex:1, padding:"10px", border:"none", borderRadius:10, cursor:"pointer", fontSize:14, fontWeight:600, transition:"all 0.2s",
+                background:mode===m?"#fff":"transparent", color:mode===m?color:"#64748b", boxShadow:mode===m?"0 2px 8px rgba(0,0,0,0.1)":"none" }}>
+                {m==="login"?"Se connecter":"S'inscrire"}
+              </button>
+            ))}
+          </div>
+          {mode==="login" ? (
+            <>
+              <h2 style={{ margin:"0 0 20px", fontSize:22, fontWeight:800, color:"#0f172a" }}>Connexion</h2>
+              <div style={{ marginBottom:14 }}>
+                <label style={{ display:"block", fontSize:13, fontWeight:600, color:"#374151", marginBottom:6 }}>Téléphone ou Email</label>
+                <input value={form.identifier||""} onChange={e=>set("identifier",e.target.value)} placeholder="628 000 000"
+                  style={{ width:"100%", padding:"12px 16px", border:"2px solid #e2e8f0", borderRadius:10, fontSize:14, boxSizing:"border-box" }}/>
+              </div>
+              <div style={{ marginBottom:20, position:"relative" }}>
+                <label style={{ display:"block", fontSize:13, fontWeight:600, color:"#374151", marginBottom:6 }}>Mot de passe</label>
+                <input value={form.pin||""} onChange={e=>set("pin",e.target.value)} type={showPass?"text":"password"} placeholder="••••••••"
+                  style={{ width:"100%", padding:"12px 40px 12px 16px", border:"2px solid #e2e8f0", borderRadius:10, fontSize:14, boxSizing:"border-box" }}/>
+                <button onClick={()=>setShowPass(p=>!p)} style={{ position:"absolute", right:12, top:34, background:"none", border:"none", cursor:"pointer" }}>
+                  <Icon name={showPass?"eyeoff":"eye"} size={16} color="#94a3b8"/>
+                </button>
+              </div>
+              <button onClick={login} style={{ width:"100%", padding:"14px", border:"none", borderRadius:12, background:`linear-gradient(135deg,${color},${color}cc)`, color:"#fff", fontSize:16, fontWeight:700, cursor:"pointer" }}>
+                Se connecter
+              </button>
+            </>
+          ) : (
+            <>
+              <h2 style={{ margin:"0 0 20px", fontSize:22, fontWeight:800, color:"#0f172a" }}>Créer un compte</h2>
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+                {fields.map(f=>(
+                  <div key={f.k} style={{ gridColumn:["dob","quartier","lieu_naissance","hopital","email","profession"].includes(f.k)?"1/-1":"auto" }}>
+                    <label style={{ display:"block", fontSize:12, fontWeight:600, color:"#374151", marginBottom:4 }}>{f.label}</label>
+                    {f.type==="select"
+                      ? <select value={form[f.k]||""} onChange={e=>set(f.k,e.target.value)} style={{ width:"100%", padding:"10px 12px", border:"2px solid #e2e8f0", borderRadius:8, fontSize:13, background:"#fff" }}>
+                          <option value="">Choisir...</option>
+                          {f.opts.map(o=><option key={o} value={o}>{o}</option>)}
+                        </select>
+                      : <input value={form[f.k]||""} onChange={e=>set(f.k,e.target.value)} type={f.type}
+                          style={{ width:"100%", padding:"10px 12px", border:"2px solid #e2e8f0", borderRadius:8, fontSize:13, boxSizing:"border-box" }}/>
+                    }
+                  </div>
+                ))}
+              </div>
+              <div style={{ marginTop:16, padding:12, background:"#f0fdf4", borderRadius:10, border:"1px solid #bbf7d0", marginBottom:16 }}>
+                <div style={{ fontSize:12, color:"#15803d", fontWeight:600, marginBottom:4 }}>📷 Photo d'identité</div>
+                <input type="file" accept="image/*" onChange={e=>{
+                  const file=e.target.files[0];
+                  if(file){const r=new FileReader();r.onload=()=>set("photo",r.result);r.readAsDataURL(file);}
+                }} style={{ fontSize:12, color:"#64748b" }}/>
+              </div>
+              <button onClick={register} style={{ width:"100%", padding:"14px", border:"none", borderRadius:12, background:`linear-gradient(135deg,${color},${color}cc)`, color:"#fff", fontSize:16, fontWeight:700, cursor:"pointer" }}>
+                Créer mon compte
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ─────────────────────────────────────────────
+//  PATIENT DASHBOARD
+// ─────────────────────────────────────────────
+const PatientDashboard = ({ user, onLogout, toast }) => {
+  const [tab, setTab] = useState("home");
+  const [docs, setDocs] = useState([]);
+  const [locked, setLocked] = useState(true);
+  const [pin, setPin] = useState("");
+  const [medecins, setMedecins] = useState([]);
+
+  useEffect(() => {
+    setDocs(DB.get("mes_documents").filter(d=>d.patientId===user.id));
+    setMedecins(DB.get("mes_medecins"));
+  }, [user.id, tab]);
+
+  const unlock = () => {
+    if(hashPin(pin)===user.pin){setLocked(false);setPin("");toast.add("Dossier déverrouillé","success");}
+    else{toast.add("PIN incorrect","error");setPin("");}
+  };
+
+  const rdvAVenir = DB.get("mes_rdv").filter(r=>r.patientId===user.id&&r.statut!=="annule"&&r.statut!=="termine");
+
+  const tabs = [
+    {key:"home",icon:"home",label:"Accueil"},
+    {key:"rdv",icon:"calendar",label:"RDV"},
+    {key:"dossier",icon:"document",label:"Dossier"},
+    {key:"conseil",icon:"phone",label:"Conseil"},
+  ];
+
+  return (
+    <div style={{ minHeight:"100vh", background:"#f8fafc", fontFamily:"'Outfit',sans-serif", display:"flex", flexDirection:"column" }}>
+      <header style={{ background:"#fff", borderBottom:"1px solid #e2e8f0", padding:"14px 20px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+        <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+          {user.photo
+            ? <img src={user.photo} style={{ width:38, height:38, borderRadius:"50%", objectFit:"cover", border:"2px solid #0ea5e9" }}/>
+            : <div style={{ width:38, height:38, background:"linear-gradient(135deg,#0ea5e9,#0284c7)", borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center" }}><Icon name="user" size={18} color="#fff"/></div>
+          }
+          <div>
+            <div style={{ fontWeight:700, fontSize:15, color:"#0f172a" }}>{user.prenom} {user.nom}</div>
+            <div style={{ fontSize:11, color:"#64748b" }}>Patient · {user.quartier}</div>
+          </div>
+        </div>
+        <button onClick={onLogout} style={{ background:"none", border:"none", cursor:"pointer", display:"flex", alignItems:"center", gap:4, color:"#ef4444", fontSize:13 }}>
+          <Icon name="logout" size={16} color="#ef4444"/> Déco.
+        </button>
+      </header>
+
+      <div style={{ flex:1, padding:"20px 16px", maxWidth:680, margin:"0 auto", width:"100%", boxSizing:"border-box" }}>
+        {tab === "home" && (
+          <div>
+            <h2 style={{ margin:"0 0 20px", fontSize:22, fontWeight:800, color:"#0f172a" }}>Bonjour, {user.prenom} 👋</h2>
+
+            {/* Alerte RDV à venir */}
+            {rdvAVenir.length > 0 && (
+              <div onClick={()=>setTab("rdv")} style={{ background:"linear-gradient(135deg,#0ea5e9,#0284c7)", borderRadius:16, padding:16, marginBottom:18, cursor:"pointer", display:"flex", alignItems:"center", gap:12 }}>
+                <div style={{ width:44, height:44, background:"rgba(255,255,255,0.2)", borderRadius:12, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+                  <Icon name="calendar" size={22} color="#fff"/>
+                </div>
+                <div style={{ flex:1 }}>
+                  <div style={{ fontWeight:800, color:"#fff", fontSize:15 }}>
+                    {rdvAVenir.length} rendez-vous à venir
+                  </div>
+                  <div style={{ fontSize:12, color:"rgba(255,255,255,0.8)" }}>Voir mes rendez-vous →</div>
+                </div>
+                {rdvAVenir.some(r=>r.statut==="en_attente") && (
+                  <span style={{ background:"#fbbf24", color:"#1e293b", fontSize:11, fontWeight:800, padding:"3px 9px", borderRadius:100 }}>En attente</span>
+                )}
+              </div>
+            )}
+
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14, marginBottom:24 }}>
+              {[
+                {icon:"document",color:"#0ea5e9",label:"Documents",val:docs.length,sub:"reçus"},
+                {icon:"stethoscope",color:"#10b981",label:"Médecins",val:medecins.length,sub:"disponibles"},
+              ].map(s=>(
+                <div key={s.label} style={{ background:"#fff", borderRadius:16, padding:18, border:"1px solid #e2e8f0", boxShadow:"0 2px 10px rgba(0,0,0,0.04)" }}>
+                  <div style={{ width:38, height:38, background:s.color+"20", borderRadius:10, display:"flex", alignItems:"center", justifyContent:"center", marginBottom:10 }}>
+                    <Icon name={s.icon} size={18} color={s.color}/>
+                  </div>
+                  <div style={{ fontSize:28, fontWeight:900, color:"#0f172a" }}>{s.val}</div>
+                  <div style={{ fontSize:12, color:"#64748b" }}>{s.label} {s.sub}</div>
+                </div>
+              ))}
+            </div>
+            <div style={{ background:"#fff", borderRadius:16, padding:20, border:"1px solid #e2e8f0" }}>
+              <h3 style={{ margin:"0 0 16px", fontSize:16, fontWeight:700, color:"#0f172a" }}>Mes informations</h3>
+              {[["Nom complet",`${user.prenom} ${user.nom}`],["Date de naissance",user.dob],["Quartier",user.quartier],["Téléphone",user.tel],["Email",user.email||"—"]].map(([l,v])=>(
+                <div key={l} style={{ display:"flex", justifyContent:"space-between", padding:"8px 0", borderBottom:"1px solid #f1f5f9", fontSize:14 }}>
+                  <span style={{ color:"#64748b" }}>{l}</span>
+                  <span style={{ color:"#0f172a", fontWeight:600 }}>{v}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {tab === "rdv" && <RdvPatientTab user={user} toast={toast}/>}
+
+        {tab === "dossier" && (
+          <div>
+            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:20 }}>
+              <h2 style={{ margin:0, fontSize:20, fontWeight:800, color:"#0f172a" }}>Mon Dossier Médical</h2>
+              {!locked && <button onClick={()=>setLocked(true)} style={{ background:"#ef444420", border:"none", borderRadius:8, padding:"6px 12px", color:"#ef4444", fontSize:12, cursor:"pointer", fontWeight:600 }}>Verrouiller</button>}
+            </div>
+            {locked ? (
+              <div style={{ background:"#fff", borderRadius:20, padding:32, textAlign:"center", border:"2px solid #fbbf24" }}>
+                <div style={{ width:60, height:60, background:"#fef3c7", borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 16px" }}>
+                  <Icon name="lock" size={28} color="#f59e0b"/>
+                </div>
+                <h3 style={{ margin:"0 0 8px", color:"#92400e" }}>Dossier Sécurisé</h3>
+                <p style={{ color:"#78716c", fontSize:14, marginBottom:20 }}>Entrez votre PIN pour accéder à vos documents</p>
+                <input value={pin} onChange={e=>setPin(e.target.value)} type="password" placeholder="Entrez votre PIN"
+                  onKeyDown={e=>e.key==="Enter"&&unlock()}
+                  style={{ width:"100%", maxWidth:200, padding:"12px 16px", border:"2px solid #e2e8f0", borderRadius:10, fontSize:16, textAlign:"center", letterSpacing:4, boxSizing:"border-box", marginBottom:16 }}/>
+                <br/>
+                <button onClick={unlock} style={{ padding:"12px 32px", background:"linear-gradient(135deg,#f59e0b,#d97706)", border:"none", borderRadius:12, color:"#fff", fontWeight:700, cursor:"pointer", fontSize:15 }}>
+                  Déverrouiller
+                </button>
+              </div>
+            ) : (
+              docs.length === 0
+                ? <div style={{ textAlign:"center", padding:40, color:"#94a3b8" }}><Icon name="document" size={48} color="#cbd5e1"/><p>Aucun document médical</p></div>
+                : docs.map(d=>(
+                    <div key={d.id} style={{ background:"#fff", borderRadius:14, padding:18, marginBottom:12, border:"1px solid #e2e8f0", display:"flex", alignItems:"center", gap:14 }}>
+                      <div style={{ width:44, height:44, background:"#0ea5e920", borderRadius:12, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+                        <Icon name="document" size={22} color="#0ea5e9"/>
+                      </div>
+                      <div style={{ flex:1 }}>
+                        <div style={{ fontWeight:700, color:"#0f172a", fontSize:15 }}>{d.titre}</div>
+                        <div style={{ fontSize:12, color:"#64748b" }}>Dr. {d.medecinNom} · {new Date(d.date).toLocaleDateString("fr-FR")}</div>
+                        <div style={{ fontSize:12, color:"#94a3b8", marginTop:2 }}>{d.description}</div>
+                      </div>
+                      {d.file && <a href={d.file} download style={{ background:"#0ea5e9", color:"#fff", padding:"6px 12px", borderRadius:8, textDecoration:"none", fontSize:12, fontWeight:600 }}>Voir</a>}
+                    </div>
+                  ))
+            )}
+          </div>
+        )}
+
+        {tab === "conseil" && <ConseilTab medecins={medecins} toast={toast} user={user}/>}
+      </div>
+
+      <nav style={{ background:"#fff", borderTop:"1px solid #e2e8f0", display:"flex", padding:"8px 0 16px" }}>
+        {tabs.map(t=>{
+          const hasNotif = t.key==="rdv" && rdvAVenir.length > 0;
+          return (
+            <button key={t.key} onClick={()=>setTab(t.key)} style={{ flex:1, background:"none", border:"none", cursor:"pointer", padding:"8px 4px", display:"flex", flexDirection:"column", alignItems:"center", gap:4, color:tab===t.key?"#0ea5e9":"#94a3b8", position:"relative" }}>
+              <Icon name={t.icon} size={22} color={tab===t.key?"#0ea5e9":"#94a3b8"}/>
+              {hasNotif && <span style={{ position:"absolute", top:4, right:"20%", width:8, height:8, background:"#ef4444", borderRadius:"50%", border:"2px solid #fff" }}/>}
+              <span style={{ fontSize:10, fontWeight:tab===t.key?700:400 }}>{t.label}</span>
+            </button>
+          );
+        })}
+      </nav>
+    </div>
+  );
+};
+
+// ─────────────────────────────────────────────
+//  CONSEIL TAB
+// ─────────────────────────────────────────────
+const ConseilTab = ({ medecins, toast }) => {
+  const [calling, setCalling] = useState(null);
+  const [callActive, setCallActive] = useState(false);
+  const [callTime, setCallTime] = useState(0);
+  const timer = useRef(null);
+  const startCall=(m,type)=>{setCalling({m,type});setCallActive(false);setCallTime(0);};
+  const acceptCall=()=>{setCallActive(true);timer.current=setInterval(()=>setCallTime(p=>p+1),1000);};
+  const endCall=()=>{clearInterval(timer.current);const cost=Math.max(500,callTime*50);const commission=Math.round(cost*0.002);toast.add(`Appel terminé (${callTime}s). Commission: ${commission} FG → compte admin`,"info");setCalling(null);setCallActive(false);setCallTime(0);};
+  const fmt=s=>`${Math.floor(s/60).toString().padStart(2,"0")}:${(s%60).toString().padStart(2,"0")}`;
+  return (
+    <div>
+      <h2 style={{ margin:"0 0 6px", fontSize:20, fontWeight:800, color:"#0f172a" }}>Espace Conseil</h2>
+      <p style={{ margin:"0 0 20px", color:"#64748b", fontSize:14 }}>Contactez un médecin pour des conseils santé et nutrition</p>
+      {calling && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(15,23,42,0.95)", zIndex:1000, display:"flex", alignItems:"center", justifyContent:"center" }}>
+          <div style={{ textAlign:"center", color:"#fff" }}>
+            <div style={{ width:90, height:90, background:"#1e293b", borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 16px", border:"3px solid #10b981" }}>
+              <Icon name="user" size={44} color="#64748b"/>
+            </div>
+            <h3 style={{ margin:"0 0 4px" }}>Dr. {calling.m.prenom} {calling.m.nom}</h3>
+            <p style={{ color:"#94a3b8", fontSize:14, margin:"0 0 24px" }}>{calling.m.profession}</p>
+            {callActive ? (
+              <><div style={{ fontSize:36, fontWeight:900, marginBottom:24 }}>{fmt(callTime)}</div>
+              <button onClick={endCall} style={{ width:64, height:64, borderRadius:"50%", background:"#ef4444", border:"none", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto" }}><Icon name="phone" size={26} color="#fff"/></button></>
+            ) : (
+              <><div style={{ color:"#94a3b8", fontSize:14, marginBottom:24 }}>Appel en cours...</div>
+              <div style={{ display:"flex", gap:20, justifyContent:"center" }}>
+                <button onClick={()=>setCalling(null)} style={{ width:64, height:64, borderRadius:"50%", background:"#ef4444", border:"none", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}><Icon name="logout" size={26} color="#fff"/></button>
+                <button onClick={acceptCall} style={{ width:64, height:64, borderRadius:"50%", background:"#10b981", border:"none", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}><Icon name="phone" size={26} color="#fff"/></button>
+              </div></>
+            )}
+          </div>
+        </div>
+      )}
+      {medecins.length===0 ? <div style={{ textAlign:"center", padding:40, color:"#94a3b8" }}><Icon name="stethoscope" size={48} color="#cbd5e1"/><p>Aucun médecin enregistré</p></div>
+      : medecins.map(m=>(
+        <div key={m.id} style={{ background:"#fff", borderRadius:16, padding:18, marginBottom:12, border:"1px solid #e2e8f0" }}>
+          <div style={{ display:"flex", gap:14, marginBottom:14 }}>
+            {m.photo?<img src={m.photo} style={{ width:52, height:52, borderRadius:"50%", objectFit:"cover", border:"2px solid #10b981" }}/>:<div style={{ width:52, height:52, background:"#10b98120", borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}><Icon name="user" size={24} color="#10b981"/></div>}
+            <div><div style={{ fontWeight:700, fontSize:15, color:"#0f172a" }}>Dr. {m.prenom} {m.nom}</div><div style={{ fontSize:13, color:"#10b981", fontWeight:600 }}>{m.profession}</div><div style={{ fontSize:12, color:"#64748b" }}>{m.experience} ans · {m.hopital||"Clinique"}</div></div>
+          </div>
+          <div style={{ display:"flex", gap:8 }}>
+            <button onClick={()=>startCall(m,"orange")} style={{ flex:1, padding:"9px 8px", background:"#FF6B0015", border:"1px solid #FF6B00", borderRadius:10, cursor:"pointer", fontSize:12, fontWeight:700, color:"#FF6B00" }}>📱 Orange</button>
+            <button onClick={()=>startCall(m,"mtn")} style={{ flex:1, padding:"9px 8px", background:"#FFCC0015", border:"1px solid #FFCC00", borderRadius:10, cursor:"pointer", fontSize:12, fontWeight:700, color:"#b45309" }}>📱 MTN</button>
+            {m.tel&&<a href={`tel:${m.tel}`} style={{ flex:1, padding:"9px 8px", background:"#0ea5e915", border:"1px solid #0ea5e9", borderRadius:10, fontSize:12, fontWeight:700, color:"#0ea5e9", textDecoration:"none", display:"flex", alignItems:"center", justifyContent:"center" }}>☎️ Direct</a>}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+// ─────────────────────────────────────────────
+//  MÉDECIN DASHBOARD
+// ─────────────────────────────────────────────
+const MedecinDashboard = ({ user, onLogout, toast }) => {
+  const [tab, setTab] = useState("home");
+  const [patients, setPatients] = useState([]);
+  const [showPayment, setShowPayment] = useState(false);
+  const [pendingDoc, setPendingDoc] = useState(null);
+  const [docForm, setDocForm] = useState({patientId:"",titre:"",description:"",file:null});
+  const setDF=(k,v)=>setDocForm(p=>({...p,[k]:v}));
+
+  useEffect(()=>{ setPatients(DB.get("mes_patients")); },[tab]);
+
+  const rdvEnAttente = DB.get("mes_rdv").filter(r=>r.medecinId===user.id&&r.statut==="en_attente");
+
+  const initSendDoc=()=>{
+    if(!docForm.patientId||!docForm.titre){toast.add("Sélectionnez un patient et le titre","error");return;}
+    setPendingDoc({...docForm});setShowPayment(true);
+  };
+  const confirmSend=()=>{
+    const docs=DB.get("mes_documents");
+    const patient=patients.find(p=>p.id===pendingDoc.patientId);
+    docs.push({id:Date.now().toString(),patientId:pendingDoc.patientId,medecinId:user.id,medecinNom:`${user.prenom} ${user.nom}`,titre:pendingDoc.titre,description:pendingDoc.description,file:pendingDoc.file,date:new Date().toISOString()});
+    DB.set("mes_documents",docs);
+    setShowPayment(false);setPendingDoc(null);setDocForm({patientId:"",titre:"",description:"",file:null});
+    toast.add(`Document envoyé à ${patient?.prenom} ${patient?.nom}!`,"success");
+  };
+
+  const myDocs=DB.get("mes_documents").filter(d=>d.medecinId===user.id);
+  const tabs=[
+    {key:"home",icon:"home",label:"Accueil"},
+    {key:"rdv",icon:"calendar",label:"RDV"},
+    {key:"envoi",icon:"send",label:"Documents"},
+    {key:"patients",icon:"user",label:"Patients"},
+  ];
+
+  return (
+    <div style={{ minHeight:"100vh", background:"#f8fafc", fontFamily:"'Outfit',sans-serif", display:"flex", flexDirection:"column" }}>
+      {showPayment&&<PaymentModal amount={5000} reason="Envoi de document médical sécurisé" onSuccess={confirmSend} onCancel={()=>setShowPayment(false)}/>}
+
+      <header style={{ background:"#fff", borderBottom:"1px solid #e2e8f0", padding:"14px 20px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+        <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+          {user.photo?<img src={user.photo} style={{ width:38, height:38, borderRadius:"50%", objectFit:"cover", border:"2px solid #10b981" }}/>:<div style={{ width:38, height:38, background:"linear-gradient(135deg,#10b981,#059669)", borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center" }}><Icon name="stethoscope" size={18} color="#fff"/></div>}
+          <div>
+            <div style={{ fontWeight:700, fontSize:15, color:"#0f172a" }}>Dr. {user.prenom} {user.nom}</div>
+            <div style={{ fontSize:11, color:"#64748b" }}>{user.profession}</div>
+          </div>
+        </div>
+        <button onClick={onLogout} style={{ background:"none", border:"none", cursor:"pointer", display:"flex", alignItems:"center", gap:4, color:"#ef4444", fontSize:13 }}>
+          <Icon name="logout" size={16} color="#ef4444"/> Déco.
+        </button>
+      </header>
+
+      <div style={{ flex:1, padding:"20px 16px", maxWidth:680, margin:"0 auto", width:"100%", boxSizing:"border-box" }}>
+        {tab==="home" && (
+          <div>
+            <h2 style={{ margin:"0 0 20px", fontSize:22, fontWeight:800, color:"#0f172a" }}>Tableau de bord</h2>
+            {rdvEnAttente.length>0 && (
+              <div onClick={()=>setTab("rdv")} style={{ background:"linear-gradient(135deg,#f59e0b,#d97706)", borderRadius:16, padding:16, marginBottom:18, cursor:"pointer", display:"flex", alignItems:"center", gap:12 }}>
+                <div style={{ width:44, height:44, background:"rgba(255,255,255,0.2)", borderRadius:12, display:"flex", alignItems:"center", justifyContent:"center" }}>
+                  <Icon name="bell" size={22} color="#fff"/>
+                </div>
+                <div>
+                  <div style={{ fontWeight:800, color:"#fff", fontSize:15 }}>{rdvEnAttente.length} RDV en attente de confirmation</div>
+                  <div style={{ fontSize:12, color:"rgba(255,255,255,0.8)" }}>Cliquez pour gérer vos rendez-vous →</div>
+                </div>
+              </div>
+            )}
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14, marginBottom:24 }}>
+              {[
+                {icon:"user",color:"#0ea5e9",label:"Patients",val:patients.length},
+                {icon:"calendar",color:"#f59e0b",label:"RDV en attente",val:rdvEnAttente.length},
+                {icon:"document",color:"#10b981",label:"Docs envoyés",val:myDocs.length},
+              ].map(s=>(
+                <div key={s.label} style={{ background:"#fff", borderRadius:16, padding:18, border:"1px solid #e2e8f0" }}>
+                  <div style={{ width:38, height:38, background:s.color+"20", borderRadius:10, display:"flex", alignItems:"center", justifyContent:"center", marginBottom:10 }}><Icon name={s.icon} size={18} color={s.color}/></div>
+                  <div style={{ fontSize:28, fontWeight:900, color:"#0f172a" }}>{s.val}</div>
+                  <div style={{ fontSize:12, color:"#64748b" }}>{s.label}</div>
+                </div>
+              ))}
+            </div>
+            <div style={{ background:"#fff", borderRadius:16, padding:20, border:"1px solid #e2e8f0" }}>
+              <h3 style={{ margin:"0 0 16px", fontSize:16, fontWeight:700 }}>Mon profil</h3>
+              {[["Profession",user.profession],["Expérience",`${user.experience} ans`],["Hôpital",user.hopital||"—"],["Email",user.email],["Téléphone",user.tel]].map(([l,v])=>(
+                <div key={l} style={{ display:"flex", justifyContent:"space-between", padding:"8px 0", borderBottom:"1px solid #f1f5f9", fontSize:14 }}>
+                  <span style={{ color:"#64748b" }}>{l}</span><span style={{ fontWeight:600, color:"#0f172a" }}>{v}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {tab==="rdv" && <RdvMedecinTab user={user} toast={toast}/>}
+
+        {tab==="envoi" && (
+          <div>
+            <h2 style={{ margin:"0 0 20px", fontSize:20, fontWeight:800 }}>Envoyer un Document</h2>
+            <div style={{ background:"#fff", borderRadius:16, padding:22, border:"1px solid #e2e8f0", marginBottom:20 }}>
+              <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:16, padding:12, background:"#fef3c7", borderRadius:10, border:"1px solid #fbbf24" }}>
+                <Icon name="info" size={16} color="#f59e0b"/><span style={{ fontSize:13, color:"#92400e" }}>Frais d'envoi: <strong>5 000 FG</strong> (Orange Money 626 584 939)</span>
+              </div>
+              <div style={{ marginBottom:14 }}>
+                <label style={{ display:"block", fontSize:13, fontWeight:600, marginBottom:6 }}>Patient *</label>
+                <select value={docForm.patientId} onChange={e=>setDF("patientId",e.target.value)} style={{ width:"100%", padding:"11px 14px", border:"2px solid #e2e8f0", borderRadius:10, fontSize:14 }}>
+                  <option value="">Sélectionner un patient...</option>
+                  {patients.map(p=><option key={p.id} value={p.id}>{p.prenom} {p.nom} · {p.tel}</option>)}
+                </select>
+              </div>
+              <div style={{ marginBottom:14 }}>
+                <label style={{ display:"block", fontSize:13, fontWeight:600, marginBottom:6 }}>Titre *</label>
+                <input value={docForm.titre} onChange={e=>setDF("titre",e.target.value)} placeholder="Ex: Résultats analyse sanguine" style={{ width:"100%", padding:"11px 14px", border:"2px solid #e2e8f0", borderRadius:10, fontSize:14, boxSizing:"border-box" }}/>
+              </div>
+              <div style={{ marginBottom:14 }}>
+                <label style={{ display:"block", fontSize:13, fontWeight:600, marginBottom:6 }}>Diagnostic / Description</label>
+                <textarea value={docForm.description} onChange={e=>setDF("description",e.target.value)} rows={4} placeholder="Entrez le diagnostic..." style={{ width:"100%", padding:"11px 14px", border:"2px solid #e2e8f0", borderRadius:10, fontSize:14, resize:"vertical", boxSizing:"border-box" }}/>
+              </div>
+              <div style={{ marginBottom:18 }}>
+                <label style={{ display:"block", fontSize:13, fontWeight:600, marginBottom:6 }}><Icon name="scan" size={14} color="#10b981"/> Scanner / Télécharger le document</label>
+                <div style={{ border:"2px dashed #10b981", borderRadius:10, padding:20, textAlign:"center", background:"#f0fdf4" }}>
+                  <input type="file" accept="image/*,application/pdf" onChange={e=>{const file=e.target.files[0];if(file){const r=new FileReader();r.onload=()=>setDF("file",r.result);r.readAsDataURL(file);}}} style={{ display:"none" }} id="doc-upload"/>
+                  <label htmlFor="doc-upload" style={{ cursor:"pointer" }}>
+                    <Icon name="upload" size={32} color="#10b981"/>
+                    <p style={{ margin:"8px 0 0", color:"#64748b", fontSize:14 }}>{docForm.file?"✓ Fichier chargé":"Cliquez pour importer (PDF/Image)"}</p>
+                  </label>
+                </div>
+              </div>
+              <button onClick={initSendDoc} style={{ width:"100%", padding:"14px", border:"none", borderRadius:12, background:"linear-gradient(135deg,#10b981,#059669)", color:"#fff", fontSize:15, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}>
+                <Icon name="send" size={18} color="#fff"/> Envoyer (5 000 FG)
+              </button>
+            </div>
+            <h3 style={{ margin:"0 0 14px", fontSize:16, fontWeight:700 }}>Documents envoyés</h3>
+            {myDocs.map(d=>(
+              <div key={d.id} style={{ background:"#fff", borderRadius:12, padding:16, marginBottom:10, border:"1px solid #e2e8f0", display:"flex", alignItems:"center", gap:12 }}>
+                <div style={{ width:40, height:40, background:"#10b98120", borderRadius:10, display:"flex", alignItems:"center", justifyContent:"center" }}><Icon name="document" size={20} color="#10b981"/></div>
+                <div style={{ flex:1 }}>
+                  <div style={{ fontWeight:600, color:"#0f172a" }}>{d.titre}</div>
+                  <div style={{ fontSize:12, color:"#64748b" }}>{new Date(d.date).toLocaleDateString("fr-FR")}</div>
+                </div>
+                <span style={{ background:"#10b98120", color:"#059669", fontSize:11, padding:"4px 8px", borderRadius:6, fontWeight:600 }}>Envoyé</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {tab==="patients" && (
+          <div>
+            <h2 style={{ margin:"0 0 20px", fontSize:20, fontWeight:800 }}>Liste des Patients</h2>
+            {patients.length===0
+              ? <div style={{ textAlign:"center", padding:40, color:"#94a3b8" }}><Icon name="user" size={48} color="#cbd5e1"/><p>Aucun patient enregistré</p></div>
+              : patients.map(p=>(
+                <div key={p.id} style={{ background:"#fff", borderRadius:14, padding:16, marginBottom:10, border:"1px solid #e2e8f0", display:"flex", alignItems:"center", gap:12 }}>
+                  {p.photo?<img src={p.photo} style={{ width:46, height:46, borderRadius:"50%", objectFit:"cover" }}/>:<div style={{ width:46, height:46, background:"#0ea5e920", borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center" }}><Icon name="user" size={22} color="#0ea5e9"/></div>}
+                  <div style={{ flex:1 }}>
+                    <div style={{ fontWeight:700, color:"#0f172a" }}>{p.prenom} {p.nom}</div>
+                    <div style={{ fontSize:12, color:"#64748b" }}>{p.tel} · {p.quartier}</div>
+                  </div>
+                  <a href={`tel:${p.tel}`} style={{ background:"#0ea5e920", border:"none", borderRadius:8, padding:"6px 10px", cursor:"pointer", textDecoration:"none" }}><Icon name="phone" size={16} color="#0ea5e9"/></a>
+                </div>
+              ))
+            }
+          </div>
+        )}
+      </div>
+
+      <nav style={{ background:"#fff", borderTop:"1px solid #e2e8f0", display:"flex", padding:"8px 0 16px" }}>
+        {tabs.map(t=>{
+          const hasNotif = t.key==="rdv" && rdvEnAttente.length > 0;
+          return (
+            <button key={t.key} onClick={()=>setTab(t.key)} style={{ flex:1, background:"none", border:"none", cursor:"pointer", padding:"8px 4px", display:"flex", flexDirection:"column", alignItems:"center", gap:4, color:tab===t.key?"#10b981":"#94a3b8", position:"relative" }}>
+              <Icon name={t.icon} size={22} color={tab===t.key?"#10b981":"#94a3b8"}/>
+              {hasNotif && <span style={{ position:"absolute", top:4, right:"20%", width:8, height:8, background:"#ef4444", borderRadius:"50%", border:"2px solid #fff" }}/>}
+              <span style={{ fontSize:10, fontWeight:tab===t.key?700:400 }}>{t.label}</span>
+            </button>
+          );
+        })}
+      </nav>
+    </div>
+  );
+};
+
+// ─────────────────────────────────────────────
+//  CONSEIL PUBLIC
+// ─────────────────────────────────────────────
+const ConseilPublic = ({ onBack, toast }) => {
+  const medecins = DB.get("mes_medecins");
+  const [calling, setCalling] = useState(null);
+  const [callActive, setCallActive] = useState(false);
+  const [callTime, setCallTime] = useState(0);
+  const timer = useRef(null);
+  const startCall=(m,type)=>{setCalling({m,type});setCallActive(false);setCallTime(0);};
+  const acceptCall=()=>{setCallActive(true);timer.current=setInterval(()=>setCallTime(p=>p+1),1000);};
+  const endCall=()=>{clearInterval(timer.current);const cost=Math.max(500,callTime*50);const commission=Math.round(cost*0.002);toast.add(`Appel terminé. Commission: ${commission} FG → admin 626 584 939`,"info");setCalling(null);setCallActive(false);setCallTime(0);};
+  const fmt=s=>`${Math.floor(s/60).toString().padStart(2,"0")}:${(s%60).toString().padStart(2,"0")}`;
+  return (
+    <div style={{ minHeight:"100vh", background:"#f8fafc", fontFamily:"'Outfit',sans-serif" }}>
+      {calling && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(15,23,42,0.95)", zIndex:1000, display:"flex", alignItems:"center", justifyContent:"center" }}>
+          <div style={{ textAlign:"center", color:"#fff" }}>
+            <div style={{ width:90, height:90, background:"#1e293b", borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 16px", border:"3px solid #10b981" }}><Icon name="user" size={44} color="#64748b"/></div>
+            <h3 style={{ margin:"0 0 4px" }}>Dr. {calling.m.prenom} {calling.m.nom}</h3>
+            <p style={{ color:"#94a3b8", fontSize:14, margin:"0 0 24px" }}>{calling.m.profession}</p>
+            {callActive ? (
+              <><div style={{ fontSize:36, fontWeight:900, marginBottom:24 }}>{fmt(callTime)}</div>
+              <button onClick={endCall} style={{ width:64, height:64, borderRadius:"50%", background:"#ef4444", border:"none", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto" }}><Icon name="phone" size={26} color="#fff"/></button></>
+            ) : (
+              <><p style={{ color:"#94a3b8", marginBottom:24 }}>Appel en cours...</p>
+              <div style={{ display:"flex", gap:20, justifyContent:"center" }}>
+                <button onClick={()=>setCalling(null)} style={{ width:64, height:64, borderRadius:"50%", background:"#ef4444", border:"none", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}><Icon name="logout" size={26} color="#fff"/></button>
+                <button onClick={acceptCall} style={{ width:64, height:64, borderRadius:"50%", background:"#10b981", border:"none", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}><Icon name="phone" size={26} color="#fff"/></button>
+              </div></>
+            )}
+          </div>
+        </div>
+      )}
+      <header style={{ background:"#fff", borderBottom:"1px solid #e2e8f0", padding:"14px 20px", display:"flex", alignItems:"center", gap:12 }}>
+        <button onClick={onBack} style={{ background:"none", border:"none", cursor:"pointer", color:"#64748b", fontSize:14 }}>← Retour</button>
+        <div style={{ width:36, height:36, background:"linear-gradient(135deg,#8b5cf6,#7c3aed)", borderRadius:10, display:"flex", alignItems:"center", justifyContent:"center" }}><Icon name="phone" size={18} color="#fff"/></div>
+        <div><div style={{ fontWeight:700, color:"#0f172a" }}>Espace Conseil</div><div style={{ fontSize:11, color:"#64748b" }}>Contactez un médecin</div></div>
+      </header>
+      <div style={{ maxWidth:680, margin:"0 auto", padding:"20px 16px" }}>
+        {medecins.length===0 ? (
+          <div style={{ textAlign:"center", padding:60, color:"#94a3b8" }}><Icon name="stethoscope" size={56} color="#cbd5e1"/><h3>Aucun médecin disponible</h3></div>
+        ) : medecins.map(m=>(
+          <div key={m.id} style={{ background:"#fff", borderRadius:16, padding:18, marginBottom:14, border:"1px solid #e2e8f0" }}>
+            <div style={{ display:"flex", gap:14, marginBottom:16 }}>
+              {m.photo?<img src={m.photo} style={{ width:56, height:56, borderRadius:"50%", objectFit:"cover", border:"2px solid #8b5cf6" }}/>:<div style={{ width:56, height:56, background:"#8b5cf620", borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}><Icon name="user" size={26} color="#8b5cf6"/></div>}
+              <div><div style={{ fontWeight:800, fontSize:16, color:"#0f172a" }}>Dr. {m.prenom} {m.nom}</div><div style={{ fontSize:13, color:"#8b5cf6", fontWeight:600 }}>{m.profession}</div><div style={{ fontSize:12, color:"#64748b" }}>{m.experience} ans · {m.hopital||"Clinique"}</div></div>
+            </div>
+            <div style={{ display:"flex", gap:8 }}>
+              <button onClick={()=>startCall(m,"orange")} style={{ flex:1, padding:"10px", background:"#FF6B0015", border:"2px solid #FF6B00", borderRadius:10, cursor:"pointer", fontSize:12, fontWeight:700, color:"#FF6B00" }}>📱 Orange</button>
+              <button onClick={()=>startCall(m,"mtn")} style={{ flex:1, padding:"10px", background:"#FFCC0015", border:"2px solid #FFCC00", borderRadius:10, cursor:"pointer", fontSize:12, fontWeight:700, color:"#b45309" }}>📱 MTN</button>
+              {m.tel&&<a href={`tel:${m.tel}`} style={{ flex:1, padding:"10px", background:"#0ea5e915", border:"2px solid #0ea5e9", borderRadius:10, fontSize:12, fontWeight:700, color:"#0ea5e9", textDecoration:"none", display:"flex", alignItems:"center", justifyContent:"center" }}>☎️ Direct</a>}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// ─────────────────────────────────────────────
+//  MAIN APP
+// ─────────────────────────────────────────────
+export default function MonEspaceSante() {
+  const [screen, setScreen] = useState("landing");
+  const [user, setUser] = useState(null);
+  const toast = useToast();
+  const handleLogin=(u)=>{setUser(u);setScreen(u.role==="patient"?"dashboard-patient":"dashboard-medecin");};
+  const logout=()=>{setUser(null);setScreen("landing");};
+  return (
+    <div style={{ fontFamily:"'Outfit',sans-serif" }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&display=swap');
+        * { box-sizing: border-box; } body { margin: 0; }
+        @keyframes slideIn { from { transform: translateX(40px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        input:focus, textarea:focus, select:focus { outline: none; border-color: #0ea5e9 !important; }
+        ::-webkit-scrollbar { width: 4px; } ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+      `}</style>
+      <Toast toasts={toast.toasts} remove={toast.remove}/>
+      {screen==="landing" && <LandingPage onSelect={role=>{ if(role==="conseil")setScreen("conseil"); else setScreen(`auth-${role}`); }}/>}
+      {screen==="auth-patient" && <AuthModal role="patient" onBack={()=>setScreen("landing")} onLogin={handleLogin} toast={toast}/>}
+      {screen==="auth-medecin" && <AuthModal role="medecin" onBack={()=>setScreen("landing")} onLogin={handleLogin} toast={toast}/>}
+      {screen==="conseil" && <ConseilPublic onBack={()=>setScreen("landing")} toast={toast}/>}
+      {screen==="dashboard-patient" && user && <PatientDashboard user={user} onLogout={logout} toast={toast}/>}
+      {screen==="dashboard-medecin" && user && <MedecinDashboard user={user} onLogout={logout} toast={toast}/>}
+    </div>
+  );
+}
